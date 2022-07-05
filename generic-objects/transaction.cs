@@ -10,12 +10,14 @@ enum TransactionType {
 
 class Transaction {
     // Attributes
-    double amount { get; set; }
-    TransactionType transactionType { get; set; }
-    DateTime datetime { get; set; }
+    public int id { get; set; }
+    public double amount { get; set; }
+    public TransactionType transactionType { get; set; }
+    public DateTime datetime { get; set; }
 
     // Constructor
     public Transaction(
+        int id,
         double amount,
         TransactionType transactionType,
         DateTime datetime
@@ -27,9 +29,7 @@ class Transaction {
 
     // Methods
     public string toString() {
-        return string.Format("Transaction: ${0} of type {1}",
-            this.amount, this.transactionType);
+        return string.Format("Transaction: ${1} of type {2} id: {0}",
+            this.id, this.amount, this.transactionType);
     }
-
-
 }

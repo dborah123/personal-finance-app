@@ -1,3 +1,5 @@
+using System.Text;
+using System.Globalization;
 
 enum AccountType {
     CHECKING,
@@ -41,7 +43,7 @@ class Account {
                     "Error with account.metadata.csv: data not there"
                 );
             }
-            string[] values = line.Split('\t');
+            string[] values = line.Split(',');
 
             // Assigning attributes and casting as necessary
             this.accountName = values[0];
@@ -63,6 +65,8 @@ class Account {
         if (this.path == null) throw new Exception("path is null");
         string actualPath = this.path + "/account.data.csv";
 
+        var cultureInfo = new CultureInfo("en-US");
+
         using (var reader = new StreamReader(actualPath)) {
             while (!reader.EndOfStream) {
                 string? line = reader.ReadLine();
@@ -73,12 +77,13 @@ class Account {
                 }
                 string[] values = line.Split(',');
 
-                double amount = Convert.ToDouble(values[0]);
-                Enum.TryParse(values[1], out TransactionType parsedTransactionType);
-                // DateTime datetime = DateTime.Parse(values[2]);
-                DateTime datetime = DateTime.Now;
+                int id = int.Parse(values[0]);
+                double amount = Convert.ToDouble(values[1]);
+                Enum.TryParse(values[2], out TransactionType parsedTransactionType);
+                DateTime datetime = DateTime.ParseExact(values[3], "M/d/yyyy", null);
 
                 Transaction transaction = new Transaction(
+                    id,
                     amount,
                     parsedTransactionType,
                     datetime
@@ -86,14 +91,55 @@ class Account {
 
                 this.transactions.Add(transaction);
                 totalAmount += amount;
-
-                Console.WriteLine(transaction.toString());
             }
         }
         this.numTransactions = this.transactions.Count;
         this.totalValue = totalAmount;
+    }
 
-        Console.WriteLine(this.toString());
+    public void unmountMetadata() {
+        StringBuilder csv = new StringBuilder();
+
+        // Retriving data to write
+        if (this.accountName == null) this.accountName = "";
+        string accountName = this.accountName;
+        AccountType accountType = this.accountType;
+        double totalValue = this.totalValue;
+
+        string entry = $"{accountName},{accountType},{totalValue}\n";
+        csv.Append(entry);
+
+        if (this.path == null) throw new Exception("path is null");
+        string actualPath = this.path + "/account.metadata.csv";
+        File.WriteAllText(actualPath, csv.ToString());
+    }
+
+    public void unmountData() {
+        if (transactions == null) return;
+        StringBuilder csv = new StringBuilder();
+        foreach (Transaction transaction in this.transactions) {
+            int id = transaction.id;
+            double amount = transaction.amount;
+            TransactionType transactionType = transaction.transactionType;
+            
+            DateTime datetime = transaction.datetime;
+            string datetimeString = datetime.ToString("M/d/yyyy");
+            string entry = $"{id},{amount},{transactionType},{datetimeString}\n";
+            
+            csv.Append(entry);
+        }
+
+        if (this.path == null) throw new Exception("path is null");
+        string actualPath = this.path + "/account.data.csv";
+        File.WriteAllText(actualPath, csv.ToString());
+    }
+
+    public void addTransaction(Transaction transaction) {
+        if (transactions == null) this.transactions = new List<Transaction>();
+        this.transactions.Add(transaction);
+
+        this.numTransactions = this.transactions.Count;
+        this.totalValue += transaction.amount;
     }
 
     public string toString() {
@@ -101,5 +147,18 @@ class Account {
             "Account: {0}\tType: {1}\tTotal Value ${2}\t# of Transactions: {3}",
             this.accountName, this.accountType, this.totalValue, this.numTransactions
         );
+    }
+
+    public void printAccountTransactions() {
+        string firstLine = $"Transaction for {this.toString()}:";
+        Console.WriteLine(firstLine);
+
+        if (this.transactions == null) return;
+
+        int id = 0;
+        foreach (Transaction transaction in this.transactions) {
+            string line = $"{id}. {transaction.toString()}";
+            Console.WriteLine(line);
+        }
     }
 }
